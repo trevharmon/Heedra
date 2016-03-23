@@ -118,7 +118,7 @@ sub Initialize_Log #($)#
     }
     $Log_StdOut = *LOG_OUT;
   }
-  if (defined $error_log)
+  if (defined $error_log and length $error_log)
   {
     if (not is_valid_filename($error_log))
     {
@@ -188,7 +188,7 @@ sub Log
       # Write to Log Files
       $result = 0 unless print $Log_StdOut $entry;
       warn "$!\nENTRY: $entry" unless $result;
-      if ($level <= WARN)
+      if ($level <= WARN and defined $Log_StdErr)
       {
         $result = 0 unless print $Log_StdErr $entry;
         warn "$!\nENTRY: $entry" unless $result;
