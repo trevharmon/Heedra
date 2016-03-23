@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use lib "$ENV{'HEEDRA_HOME'}/lib" || '/opt/heedra/lib';
+use Getopt::Long;
 use Heedra;
 use Heedra::Log;
 
