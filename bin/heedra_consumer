@@ -61,10 +61,16 @@ MAIN:
 sub _init #()#
 {
 
-  Info('Load Configuration File');
+  Debug('Handle command line arguments');
+  my $help = undef;
+  my $verbose = undef;
+  GetOptions ( 'h' => \$help,
+               'v' => \$verbose,
+  ) or &Usage;
+  &Usage                      if defined $help;
+  Heedra::Log::set_verbose(1) if defined $verbose;
 
-  # Load Config File
-  Heedra::Log::set_verbose(1);
+  Info('Load Configuration File');
   $Heedra = new Heedra;
   Fatal('Could Not Load Configuration File') unless defined $Heedra;
 
@@ -73,36 +79,21 @@ sub _init #()#
 }
 #
 #-------------------------------------------------------------------------------
+#
+sub Usage
+{
+  my $executable =  $0;
+     $executable =~ s/^.+\///;
+  print "\nUSAGE:  $executable [-v] [-h]\n"
+      . " -v   Verbose Mode\n"
+      . " -h   Help message\n";
+  exit;
+}
+#
+#-------------------------------------------------------------------------------
 
 
 __END__
-
-=head1 NAME
-
-Heedra::???? - ???? for Heedra Queuing System
-
-=head1 SYNOPSIS
-
-  use Heedra::????;
-  ????
-
-=head1 DESCRIPTION
-
-
-=head2 EXPORT
-
-None by default.
-
-
-=head1 SEE ALSO
-
-Project GitHub Site:
-
-   https://github.com/trevharmon/Heedra
-
-=head1 AUTHOR
-
-Trev Harmon
 
 =head1 COPYRIGHT AND LICENSE
 
