@@ -10,11 +10,16 @@ our (@ISA, @EXPORT, @EXPORT_OK, %EXPORT_TAGS);
 BEGIN
 {
   require Exporter;
+  my @environment   = qw( ENV_HEEDRA_HOME ENV_LOG_LEVEL      );
+  my @configuration = qw( CONFIG_FILENAME CONFIG_SEARCH_PATH );
+
   @ISA         = qw( Exporter );
   @EXPORT      = qw( );
-  @EXPORT_OK   = qw( CONFIG_FILENAME CONFIG_SEARCH_PATH );
+  @EXPORT_OK   =   ( @environment, @configuration );
   %EXPORT_TAGS = (
-                   all => [ @EXPORT_OK ],
+                   all    => [ @EXPORT_OK     ],
+                   env    => [ @environment   ],
+                   config => [ @configuration ],
                  );
 }
 #
@@ -23,11 +28,19 @@ BEGIN
 
 ################################################################################
 #
-use constant CONFIG_FILENAME => 'heedra.conf';
+use constant # Environment Variables
+{
+  ENV_HEEDRA_HOME => 'HEEDRA_HOME',
+  ENV_LOG_LEVEL   => 'HEEDRA_LOG_LEVEL',
+};
+use constant # File Names
+{
+  CONFIG_FILENAME => 'heedra.conf',
+};
 #
 ################################################################################
 #
-my @CONFIGURATION_SEARCH_PATH = qw( /etc ./etc . );
+my @CONFIGURATION_SEARCH_PATH = ( $ENV{&ENV_HEEDRA_HOME}, '/etc', './etc', '.' );
 #
 ################################################################################
 

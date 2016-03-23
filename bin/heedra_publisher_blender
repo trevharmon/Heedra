@@ -78,16 +78,16 @@ sub _init #()#
     'e=i' => \$End_Frame,
     'f=i' => \$frame,
     'h'   => \$help,
-    'j=s' => \$Job_File,
     's=i' => \$Start_Frame,
     'v'   => \$verbose,
   ) or &usage(1);
   &usage(0) if defined $help;
 
-  $Start_Frame = $End_Frame = $frame if defined $frame;
-  if (not defined $End_Frame or not defined $Job_File or not defined $Start_Frame)
+  $Job_File    = $ARGV[0];
+
+  if (not defined $Job_File)
   {
-    print STDERR "ERROR: Problem with commandline paramters\n\n";
+    print STDERR "\nERROR: Job Definition not specified\n\n";
     &usage(1);
   }
   set_verbose(1) if defined $verbose;
@@ -101,6 +101,22 @@ sub _init #()#
   Info("Loading Job File: $Job_File");
   $Job = Heedra::Blender::Job->new( $Job_File );
   Info('Job File Loaded');
+
+  # Update Start and End Frames
+  if (defined $frame)
+  {
+    $Start_Frame = $End_Frame = $frame if defined $frame;
+  }
+  elsif (not defined $Start_Frame or not defined $End_Frame)
+  {
+    $Start_Frame = $Job->get_start_frame unless defined $Start_Frame;
+    $End_Frame   = $Job->get_end_frame   unless defined $End_Frame;
+  }
+  else
+  {
+    # NO-OP
+  }
+
   return;
     
 }
@@ -114,11 +130,13 @@ sub usage #($)#
   my $executable = $0;
      $executable =~ s/^.+\///;
 
-  print "USAGE: $executable -j JOB_DEFINITION -s START_FRMAE -e END_FRAME [-h]\n"
-      . "  -j JOB_DEFINITION   File with job definition (.ini)\n"
-      . "  -s START_FRAME      First frame to render\n"
-      . "  -e END_FRAME        Last frame to render\n"
-      . "  -h         Help message  [Optional]\n";
+  print "USAGE:  $executable JOB_DEFINITION [-s START_FRAME -e END_FRAME|-f FRAME] [-v] [-h]\n"
+      . "  JOB_DEFINITION   File with job definition (.ini)\n"
+      . "  -s START_FRAME   First frame to render\n"
+      . "  -e END_FRAME     Last frame to render\n"
+      . "  -f FRAME         Specify specific frame (overrides -s and -e)\n"
+      . "  -v               Verbose Mode\n"
+      . "  -h               Help message\n";
 
   exit $exit_code;
 

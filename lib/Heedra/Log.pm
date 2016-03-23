@@ -63,10 +63,6 @@ my %LOG_LEVELS = ( 'TRACE' => TRACE,
 #
 ################################################################################
 #
-use constant # Environment Variables
-{
-  ENV_LOG_LEVEL => 'HEEDRA_LOG_LEVEL',
-};
 use constant # Configuration File Section
 {
   ERROR_LOG => 'error_log',
