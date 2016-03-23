@@ -146,9 +146,6 @@ $_init = sub #(%)#
     }
   }
 
-  # Set Log Level
-  Heedra::Log::set_log_level($load_data{&LOG}{&LOG_LEVEL});
-
   # Set Object Values
   foreach my $section (keys %load_data)
   {
@@ -162,7 +159,7 @@ $_init = sub #(%)#
   }
 
   # Have to wait until here to do the processing
-  Fatal("Cannot Start Logging Engine") unless Initialize_Log($conf);
+  Initialize_Log($conf) || Fatal("Cannot Start Logging Engine");
   # Can now use extended logging mechanisms
 
   # Handlers

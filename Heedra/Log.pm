@@ -63,6 +63,10 @@ my %LOG_LEVELS = ( 'TRACE' => TRACE,
 #
 ################################################################################
 #
+use constant # Environment Variables
+{
+  ENV_LOG_LEVEL => 'HEEDRA_LOG_LEVEL',
+};
 use constant # Configuration File Section
 {
   ERROR_LOG => 'error_log',
@@ -102,6 +106,8 @@ sub Initialize_Log #($)#
   my $log       = $conf->val( LOG, LOG       );
   my $log_level = $conf->val( LOG, LOG_LEVEL );
   set_log_level($log_level) if defined $log_level;
+  set_log_level($ENV{&ENV_LOG_LEVEL}) if exists  $ENV{&ENV_LOG_LEVEL}
+                                     and defined $ENV{&ENV_LOG_LEVEL};
 
   # Set up Log Files per Config File
   if (defined $log)
