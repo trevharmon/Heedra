@@ -1,0 +1,176 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+use lib "$ENV{'HEEDRA_HOME'}//lib" || '/opt/heedra/lib';
+use Heedra;
+use Heedra::Blender::Job;
+use Heedra::Blender::Payload;
+use Heedra::Log qw( :all );
+use Heedra::Message;
+use Getopt::Long;
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#
+our $Heedra      = undef;
+our $Job         = undef;
+our $Job_File    = undef;
+our $Start_Frame = undef;
+our $End_Frame   = undef;
+#
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+#===============================================================================
+#
+MAIN:
+{
+
+  Info('Blender Publisher Starting');
+  &_init;
+
+  my $total_frames = $End_Frame - $Start_Frame + 1;
+  Info( sprintf 'Rendering %d frame%s: #%d%s',
+                $total_frames,
+                ($total_frames > 1) ? 's' : '',
+                $Start_Frame,
+                ($total_frames > 1) ? "-$End_Frame" : ''   ); 
+
+  # Payload
+  my $frame_stub = ($Start_Frame == $End_Frame)
+                 ? " #$Start_Frame"
+                 : "s #$Start_Frame-$End_Frame";
+  Info("Generate Payload for Frame$frame_stub");
+  my $payload = Heedra::Blender::Payload->new( queue       => $Heedra->queue,
+                                               job         => $Job,
+                                               start_frame => $Start_Frame,
+                                               end_frame   => $End_Frame,
+                                             );
+  Fatal("Could not build payload for Frame$frame_stub") unless defined $payload;
+
+  # Mesage
+  Info("Generating Message for Frame$frame_stub");
+  my $message = Heedra::Message->new( payload => $payload );
+  Fatal("Could not build message for Frame$frame_stub") unless defined $message;
+
+  # Publish
+  Info("Publishing Message for Frame$frame_stub to Queue");
+  $Heedra->publish($message);
+
+  exit;
+
+}
+#
+#===============================================================================
+
+#-------------------------------------------------------------------------------
+#
+sub _init #()#
+{
+
+  # Commandline Arguments
+  my $help    = undef;
+  my $frame   = undef;
+  my $verbose = undef;
+  GetOptions
+  (
+    'e=i' => \$End_Frame,
+    'f=i' => \$frame,
+    'h'   => \$help,
+    'j=s' => \$Job_File,
+    's=i' => \$Start_Frame,
+    'v'   => \$verbose,
+  ) or &usage(1);
+  &usage(0) if defined $help;
+
+  $Start_Frame = $End_Frame = $frame if defined $frame;
+  if (not defined $End_Frame or not defined $Job_File or not defined $Start_Frame)
+  {
+    print STDERR "ERROR: Problem with commandline paramters\n\n";
+    &usage(1);
+  }
+  set_verbose(1) if defined $verbose;
+
+  # Load Config File
+  Info('Loading Configuration File');
+  $Heedra = new Heedra;
+  Info('Configuration File Loaded');
+
+  # Load Job File
+  Info("Loading Job File: $Job_File");
+  $Job = Heedra::Blender::Job->new( $Job_File );
+  Info('Job File Loaded');
+  return;
+    
+}
+#
+#-------------------------------------------------------------------------------
+#
+sub usage #($)#
+{
+
+  my $exit_code  = (defined $_[0]) ? $_[0] : 0;
+  my $executable = $0;
+     $executable =~ s/^.+\///;
+
+  print "USAGE: $executable -j JOB_DEFINITION -s START_FRMAE -e END_FRAME [-h]\n"
+      . "  -j JOB_DEFINITION   File with job definition (.ini)\n"
+      . "  -s START_FRAME      First frame to render\n"
+      . "  -e END_FRAME        Last frame to render\n"
+      . "  -h         Help message  [Optional]\n";
+
+  exit $exit_code;
+
+}
+#
+#-------------------------------------------------------------------------------
+
+
+__END__
+
+=head1 NAME
+
+Heedra::???? - ???? for Heedra Queuing System
+
+=head1 SYNOPSIS
+
+  use Heedra::????;
+  ????
+
+=head1 DESCRIPTION
+
+
+=head2 EXPORT
+
+None by default.
+
+
+=head1 SEE ALSO
+
+Project GitHub Site:
+
+   https://github.com/trevharmon/Heedra
+
+=head1 AUTHOR
+
+Trev Harmon
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2016 Trev Harmon
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
