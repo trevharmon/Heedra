@@ -345,8 +345,14 @@ sub execute ()
 
   # Run Render Job
   Debug('Preparing to render blend file');
-  for (my $frame = $payload->get_start_frame; $frame <= $payload->get_end_frame; $frame++)
-  {
+  RENDER:
+  { 
+
+    my $start_frame = $payload->get_start_frame;
+    my $end_frame   = $payload->get_end_frame;
+    my $frame_stub  = ($start_frame == $end_frame)
+                    ? " #$start_frame"
+                    : "s #$start_frame-$end_frame";
 
     # !! Order Matters for Blender Commandline Arguments !!
     my @cmd = ( $self->{&BLENDER},
@@ -359,19 +365,30 @@ sub execute ()
               );
     push @cmd, '-S', $job->get_scene  if defined $job->get_scene;
     push @cmd, '-P', $job->get_script if defined $job->get_script;
-    push @cmd, '-f', $frame;
-    Debug('Prepared Command: ' . join(' ', @cmd));
+    if ($start_frame == $end_frame)
+    {
+      push @cmd, '-f', $start_frame;
+    }
+    else
+    {
+      push @cmd, '-s', $start_frame,
+                 '-e', $end_frame,
+                 '-a';
+    }
+    Debug ( 'Prepared Command: ' . join(' ', @cmd) );
+    Info  ( "Rendering Frame$frame_stub"           );
 
-    Info("Rendering Frame #$frame");
     return 0 unless $self->$_run(@cmd);
-    Info("Frame $frame Complete");
+    Info("Frame$frame_stub Complete");
 
     # Stage Out Completed File(s)
-    Debug('Preparing to stage rendered frame to S3');
+    Debug( sprintf 'Preparing to stage rendered%s frame to S3',
+                   ($start_frame == $end_frame) ? '' : 's'      );
     my $stdout_text   = $self->{&OUTPUT_STDOUT};
     my $stderr_text   = $self->{&OUTPUT_STDERR};
     my $output_bucket = $job->get_output_bucket;
-    if ($stdout_text =~ /Saved:\s(.+?)[\r\n]/)
+    my $frame_count   = 0;
+    while ($stdout_text =~ /Saved:\s(.+?)[\r\n]/gs)
     {
       my $completed_frame = $1;
       Info("Uploading completed frame '$completed_frame' to $output_bucket");
@@ -379,10 +396,16 @@ sub execute ()
 #TODO check output to see if command was successful
       Info("Deleting $completed_frame");
       unlink $completed_frame;
+      $frame_count++;
     }
-    else
+    if ($frame_count != $start_frame - $end_frame + 1)
     {
-      Error("Could not determine filename for completed frame #$frame");
+      Error( sprintf 'Could not determine%s filename%s for completed frame%s: %d found',
+                     ($start_frame == $end_frame) ? '' : ' all',
+                     ($start_frame == $end_frame) ? '' : 's',
+                     $frame_stub,
+                     $frame_count
+           );
       return 0;
     }
 
