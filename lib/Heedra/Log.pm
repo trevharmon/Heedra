@@ -8,6 +8,7 @@ use Config::IniFiles;
 use DateTime;
 use Heedra::Constants qw( :all );
 use Heedra::Utils     qw( array_contains is_valid_filename );
+use Time::HiRes       qw ();
 
 
 ################################################################################
@@ -169,13 +170,16 @@ sub Log
   {
 
     # Build Message
-    # [timestamp] [pid] [datetime] [level]\tmessage
-    my $now   =  time;
-    my $dt    =  DateTime->from_epoch( epoch => $now );
+    # [timestamp][sub-second][pid][datetime] [level]\tmessage
+    my $now_sub = Time::HiRes::time;
+    my $now_sec = int $now_sub;
+       $now_sub = 1000 * ($now_sub - $now_sec);
+    my $dt    =  DateTime->from_epoch( epoch => $now_sec );
     $message  =~ s/\s+$/\n/s;      # Remove trailing space
     $message  =~ s/[\r\n]+/\n\t/g; # Tab-indent subsequent lines
-    my $entry =  sprintf "[%d] [%05d] [%02d %s %4d %s] [%s]\t%s\n",
-                         $now,
+    my $entry =  sprintf "[%d][%04d][%05d][%02d %s %4d %s] [%s]\t%s\n",
+                         $now_sec,
+                         $now_sub,
                          $$,
                          $dt->day, $dt->month_abbr, $dt->year,
                          $dt->hms,
