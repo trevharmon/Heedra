@@ -1,0 +1,230 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+use Image::Info qw(image_info dim);
+
+################################################################################
+#
+use constant
+{
+  COLOR    => 'color',
+  COUNT    => 'count',
+  FILENAME => 'filename',
+  HEIGHT   => 'height',
+  METAINFO => 'meta',
+  TYPE     => 'type',
+  WIDTH    => 'width',
+};
+#
+################################################################################
+#
+my %Data   = ();
+my $Dir    = undef;
+my %Files  = ();
+my $MaxIdx = undef;
+my $MinIdx = undef;
+my $Regex  = undef;
+#
+################################################################################
+
+
+#===============================================================================
+#
+MAIN:
+{
+  &initialize;
+  &read_file_information;
+  &display_information;
+  exit;
+}
+#
+#===============================================================================
+
+
+#-------------------------------------------------------------------------------
+#
+sub initialize #()#
+{
+
+  my $definition = $ARGV[0];
+  &Usage unless defined $definition;
+
+  &Error("Missing '#' characters in definition") unless $definition =~ /#/;
+
+  $Regex =  $definition;
+  $Regex =~ s/#+/(\\d+)/;
+  $Regex =~ s/^.+\///;
+
+  $Dir = $definition;
+  if ($Dir =~ /\//)
+  {
+    $Dir =~ s/^(.+)\/.+$/$1/;
+  }
+  else
+  {
+    $Dir = '.';
+  }
+
+  return;
+
+}
+#
+#-------------------------------------------------------------------------------
+#
+sub read_file_information #()#
+{
+
+  local $| = 1;
+
+  # Get File List
+  Error('Cannot determine directory') unless defined $Dir;
+  opendir DIR, $Dir or Error("Cannot open directory '$Dir': $!");
+  my @files = grep { /^$Regex$/o } readdir DIR;
+  closedir DIR;
+
+  print 'Processing';
+  foreach my $file (@files)
+  {
+    print '.';
+    next unless $file =~ /$Regex/o;
+
+    my $idx = int $1;
+    $Files{$idx}{&FILENAME} = "$Dir/$file";
+    $Files{$idx}{&METAINFO} = image_info($Files{$idx}{&FILENAME});
+    if (my $err = $Files{$idx}{&METAINFO}->{error})
+    {
+      Warning("Cannot parse image info: $err");
+      delete $Files{$1};
+      next;
+    }
+
+    $Files{$idx}{ &COLOR  } = $Files{$idx}{&METAINFO}{ 'color_type'      };
+    $Files{$idx}{ &HEIGHT } = $Files{$idx}{&METAINFO}{ 'height'          };
+    $Files{$idx}{ &TYPE   } = $Files{$idx}{&METAINFO}{ 'file_media_type' };
+    $Files{$idx}{ &WIDTH  } = $Files{$idx}{&METAINFO}{ 'width'           };
+
+    my $composite = sprintf '%05dx%05d-%s',
+                            $Files{$idx}{ &WIDTH  },
+                            $Files{$idx}{ &HEIGHT },
+                            $Files{$idx}{ &TYPE   };
+    $Data{$composite}{ &HEIGHT } = $Files{$idx}{ &HEIGHT };
+    $Data{$composite}{ &TYPE   } = $Files{$idx}{ &TYPE   };
+    $Data{$composite}{ &WIDTH  } = $Files{$idx}{ &WIDTH  };
+    $Data{$composite}{ &COUNT  }++;
+
+  }
+  print "\n";
+
+  # Get Min/Max
+  foreach my $idx (keys %Files)
+  {
+    $MinIdx = $idx if not defined $MinIdx or $idx < $MinIdx;
+    $MaxIdx = $idx if not defined $MaxIdx or $idx > $MaxIdx;
+  }
+
+  return;
+
+}
+#
+#-------------------------------------------------------------------------------
+#
+sub display_information #()#
+{
+
+  print "\n";
+
+  my $first_row = 1;
+  foreach my $idx (sort { $Data{$a}{&COUNT} <=> $Data{$b}{&COUNT}  }keys %Data)
+  {
+    printf "%s%d x %d\t%s\t(%d instance%s)\n",
+           $first_row ? 'Image Types: ' : '             ',
+           $Data{$idx}{ &WIDTH  },
+           $Data{$idx}{ &HEIGHT },
+           $Data{$idx}{ &TYPE   },
+           $Data{$idx}{ &COUNT  },
+           $Data{$idx}{ &COUNT  } > 1 ? 's' : '';
+    $first_row = 0;
+  }
+
+  print 'Frame Count: ' . scalar(keys %Files) . "\n";
+  print "Frame Range: $MinIdx - $MaxIdx\n";
+
+  my @missing = ();
+  foreach my $idx ($MinIdx..$MaxIdx)
+  {
+    push @missing, $idx unless exists $Files{$idx};
+  }
+  my $missing_count = scalar @missing;
+  if ($missing_count)
+  {
+    printf "Missing Count: %d frame%s\n",
+           $missing_count,
+           $missing_count > 1 ? 's' : '';
+    print 'Missing Frames: ' . join(', ', @missing) . "\n";
+  }
+
+  print "\n";
+
+  return;
+
+}
+#
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+sub Error #($)#
+{
+  my $message = defined($_[0]) ? $_[0] : '<UNKNOWN>';
+  chomp $message;
+  print STDERR "[ERROR] $message\n";
+  exit 255;
+}
+#
+#-------------------------------------------------------------------------------
+#
+sub Warning #($)#
+{
+  my $message = defined($_[0]) ? $_[0] : '<UNKNOWN>';
+  chomp $message;
+  print STDERR "[WARNING] $message\n";
+  return;
+}
+#
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+sub Usage #()#
+{
+  my $executable = $0;
+     $executable =~ s/^.+\///;
+  print "\nUSAGE:  $executable DEFINITION\n"
+      . "\n  DEFINITION   Blender style output definition\n\n";
+  exit;
+}
+#
+#-------------------------------------------------------------------------------
+
+
+__END__
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2016 Trev Harmon
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=cut
+
